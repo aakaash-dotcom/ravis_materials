@@ -1,0 +1,6 @@
+{
+  "name": "Ravi's Tuition Centre - Free & Premium Study Hub",
+  "description": "Free board exam study resources, formula sheets, and affordable Centum booster question bundles for Tamil Nadu 10th & 12th students by Ravi's Tuition Centre, Madurai.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
