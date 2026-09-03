@@ -1,5 +1,5 @@
 import React from 'react';
-import { Sparkles, Check, Eye, Zap, ArrowRight, Unlock, ExternalLink } from 'lucide-react';
+import { Check, Sparkles, BookOpen, ExternalLink, Zap } from 'lucide-react';
 import { Language, PremiumBundle } from '../types';
 
 interface PremiumBundleCardProps {
@@ -16,163 +16,107 @@ export const PremiumBundleCard: React.FC<PremiumBundleCardProps> = ({
   isUnlocked,
   onPreviewSample,
   onBuy,
-  lang,
   isHighlighted,
 }) => {
-  const title = lang === 'tamil' && bundle.tamilTitle ? bundle.tamilTitle : bundle.title;
-  const tagline = lang === 'tanglish' 
-    ? bundle.tanglishTagline 
-    : (bundle.tamilTagline || bundle.tagline);
-
   return (
     <div
       id={bundle.id}
-      className={`relative rounded-[2.5rem] border-4 transition-all duration-300 flex flex-col justify-between p-6 sm:p-7 overflow-hidden text-white ${
+      className={`rounded-2xl border-2 transition-all p-3.5 sm:p-4 flex flex-col justify-between text-[#1F2937] bg-white gap-3 ${
         isHighlighted
-          ? 'border-[#FFBB00] ring-8 ring-[#FFBB00]/30 bg-[#7C3AED] shadow-[10px_10px_0px_#B45309] scale-[1.01]'
-          : 'border-[#5B21B6] bg-[#7C3AED] shadow-2xl hover:shadow-[8px_8px_0px_#5B21B6]'
+          ? 'border-[#FF4D00] ring-4 ring-[#FF4D00]/20 shadow-md'
+          : 'border-amber-300 shadow-xs hover:shadow-md'
       }`}
     >
-      {/* Decorative top-right circle */}
-      <div className="absolute -top-10 -right-10 w-40 h-40 bg-[#9333EA] rounded-full opacity-30 pointer-events-none" />
-
-      {/* Popular or Savings Badge */}
-      {bundle.popularBadge && (
-        <div className="absolute -top-3 left-6 z-20">
-          <span className="px-3.5 py-1.5 rounded-full text-xs font-black bg-[#FFBB00] text-black shadow-md flex items-center gap-1.5 uppercase tracking-wider">
-            <Sparkles className="w-3.5 h-3.5 fill-black" />
-            {bundle.popularBadge}
-          </span>
-        </div>
-      )}
-
-      <div className="relative z-10">
-        {/* Class and Tier Badges */}
-        <div className="flex items-center justify-between gap-2 mb-3 mt-1 flex-wrap">
+      {/* Top badges & Title */}
+      <div>
+        <div className="flex items-center justify-between gap-1.5 mb-1.5 flex-wrap">
           <div className="flex items-center gap-1.5 flex-wrap">
-            <span className="px-3 py-1 rounded-full text-xs font-black bg-white text-[#7C3AED] shadow-sm">
-              {bundle.classLevel} BOARD
+            <span className="px-2 py-0.5 rounded-md text-[10px] font-black bg-[#FF4D00] text-white uppercase tracking-wider">
+              {bundle.classLevel} PRO
             </span>
-            <span className="px-2.5 py-1 rounded-full text-[11px] font-black bg-[#5B21B6] text-indigo-100 border border-white/20">
-              {bundle.tier === 'ultra_pro' ? '👑 ULTRA PRO VIP' : '⚡ PRO BOOSTER'}
+            <span className="px-2 py-0.5 rounded-md text-[10px] font-bold bg-amber-100 text-amber-900 border border-amber-200">
+              {bundle.subjects.join(', ')}
             </span>
           </div>
 
-          <span className="px-3 py-1 rounded-full text-xs font-black bg-yellow-300 text-yellow-950 shadow-xs">
+          <span className="px-2 py-0.5 rounded-md text-[10px] font-black bg-yellow-100 text-yellow-900 border border-yellow-300">
             {bundle.targetExamScore}
           </span>
         </div>
 
-        {/* Title */}
-        <h3 className="text-xl sm:text-2xl font-black text-white tracking-tight leading-tight">
-          {title}
+        {/* Short, bold Title */}
+        <h3 className="text-base sm:text-lg font-black text-slate-900 leading-snug">
+          {bundle.title}
         </h3>
 
-        {/* Tagline */}
-        <p className="text-xs sm:text-sm font-bold text-indigo-200 mt-1.5 leading-relaxed">
-          {tagline}
-        </p>
-
-        {/* Price Box with Tanglish / Tamil anchor */}
-        <div className="mt-4 p-4 rounded-2xl bg-white/15 border border-white/25 backdrop-blur-sm flex items-baseline justify-between shadow-inner">
-          <div>
-            <div className="flex items-baseline gap-2.5">
-              <span className="text-3xl sm:text-4xl font-black text-white tracking-tight">
-                ₹{bundle.price}
-              </span>
-              <span className="text-sm font-bold text-indigo-300 line-through">
-                ₹{bundle.originalPrice}
-              </span>
-              <span className="text-xs font-black px-2 py-0.5 rounded-md bg-[#FF4D00] text-white shadow-xs">
-                {bundle.savingsPercent}% OFF
-              </span>
-            </div>
-            <span className="text-xs text-yellow-200 font-bold block mt-1">
-              {lang === 'tanglish'
-                ? (bundle.price <= 49 ? '🍧 Less than 1 plate Madurai Famous Jigarthanda!' : '👑 All Subjects Pass + Direct Doubt Help')
-                : (bundle.price <= 49 ? '🍧 ஒரு தட்டு ஜிகர்தண்டா செலவு மட்டுமே!' : '👑 அனைத்து பாடங்கள் + நேரடி உதவி')}
-            </span>
-          </div>
-
-          <div className="text-right">
-            <span className="text-xs font-black text-yellow-300 block">
-              1-Time UPI
-            </span>
-            <span className="text-[10px] font-bold text-indigo-200 block">
-              Google Drive
-            </span>
-          </div>
-        </div>
-
-        {/* Feature List */}
-        <div className="mt-4 space-y-2">
-          {bundle.features.map((feat, i) => (
-            <div key={i} className="flex items-start gap-2.5 text-xs sm:text-sm font-medium text-indigo-100">
-              <div className="w-5 h-5 rounded-full bg-yellow-300 text-black flex items-center justify-center shrink-0 mt-0.5 font-black shadow-xs">
-                <Check className="w-3 h-3 stroke-[3]" />
-              </div>
-              <span className="leading-snug">{feat}</span>
-            </div>
-          ))}
-        </div>
-
-        {/* Bundle Meta Numbers */}
-        <div className="mt-4 pt-3 border-t border-white/20 flex items-center justify-between text-xs font-bold text-indigo-200">
-          <span>📁 {bundle.totalPdfs} Drive PDFs</span>
-          <span>🎯 {bundle.totalQuestions}+ Solved Questions</span>
+        {/* Price Row: Big, clear price */}
+        <div className="flex items-baseline gap-2 mt-2">
+          <span className="text-2xl sm:text-3xl font-black text-[#FF4D00] tracking-tight">
+            ₹{bundle.price}
+          </span>
+          <span className="text-xs font-bold text-gray-400 line-through">
+            ₹{bundle.originalPrice}
+          </span>
+          <span className="text-[10px] font-black px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-800 border border-emerald-300">
+            {bundle.savingsPercent}% OFF
+          </span>
         </div>
       </div>
 
-      {/* Buttons */}
-      <div className="relative z-10 mt-5 space-y-2.5">
-        {isUnlocked ? (
-          <div className="p-3.5 rounded-2xl bg-white/20 border-2 border-white/40 flex items-center justify-between gap-2">
-            <div className="flex items-center gap-2 text-yellow-300 font-black text-xs">
-              <Unlock className="w-4 h-4 shrink-0" />
-              <span>Unlocked!</span>
-            </div>
-            <a
-              href={bundle.driveFolderLink || "https://drive.google.com"}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="px-3.5 py-2 rounded-xl bg-yellow-300 text-black font-black text-xs hover:bg-yellow-200 shadow-sm flex items-center gap-1.5"
-            >
-              <span>Open Google Drive</span>
-              <ExternalLink className="w-3.5 h-3.5" />
-            </a>
+      {/* Visual 3-Item Features List (No long text) */}
+      <div className="bg-amber-50/70 border border-amber-200 rounded-xl p-2.5 space-y-1.5">
+        <div className="flex items-center gap-2 text-xs font-black text-slate-800">
+          <div className="w-4 h-4 rounded-full bg-emerald-500 text-white flex items-center justify-center shrink-0">
+            <Check className="w-3 h-3 stroke-[3]" />
           </div>
-        ) : (
-          <>
-            {/* Primary Buy Button */}
-            <button
-              onClick={() => onBuy(bundle)}
-              className="w-full flex items-center justify-center gap-2 py-4 px-4 rounded-2xl bg-[#FFBB00] hover:bg-[#F59E0B] text-black font-black text-sm shadow-[0_4px_0_#B45309] active:translate-y-1 active:shadow-none transition-all min-h-[48px]"
-            >
-              <Zap className="w-4 h-4 fill-black" />
-              <span>
-                {lang === 'tanglish'
-                  ? `Unlock ${bundle.tier === 'ultra_pro' ? 'Ultra Pro VIP' : 'Pro Booster'} • ₹${bundle.price}`
-                  : `ப்ரோ தொகுப்பை பெறுக • ₹${bundle.price}`}
-              </span>
-              <ArrowRight className="w-4 h-4" />
-            </button>
+          <span>Top 25 Twist Questions + Solved Steps</span>
+        </div>
 
-            {/* Sneak Peek Button */}
-            <button
-              onClick={() => onPreviewSample(bundle)}
-              className="w-full flex items-center justify-center gap-2 py-2.5 px-3 rounded-2xl bg-white/15 hover:bg-white/25 text-white text-xs font-bold transition-all border border-white/30 min-h-[42px]"
-            >
-              <Eye className="w-3.5 h-3.5 text-yellow-300" />
-              <span>
-                {lang === 'tanglish'
-                  ? 'Free Sneak-Peek (Inspect 3 Sample Pages)'
-                  : 'இலவச மாதிரி பக்கங்களை பாருங்கள் (3 பக்கங்கள்)'}
-              </span>
-            </button>
-          </>
+        <div className="flex items-center gap-2 text-xs font-black text-slate-800">
+          <div className="w-4 h-4 rounded-full bg-emerald-500 text-white flex items-center justify-center shrink-0">
+            <Check className="w-3 h-3 stroke-[3]" />
+          </div>
+          <span>Examiner Step-Marking Blueprint</span>
+        </div>
+
+        <div className="flex items-center gap-2 text-xs font-black text-slate-800">
+          <div className="w-4 h-4 rounded-full bg-emerald-500 text-white flex items-center justify-center shrink-0">
+            <Check className="w-3 h-3 stroke-[3]" />
+          </div>
+          <span>Instant Google Drive Lifetime Folder</span>
+        </div>
+      </div>
+
+      {/* Action Buttons: 3-Page Sample + Buy */}
+      <div className="grid grid-cols-2 gap-2 pt-0.5">
+        <button
+          onClick={() => onPreviewSample(bundle)}
+          className="flex items-center justify-center gap-1.5 py-2 px-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-800 text-xs font-black border border-slate-300 transition-colors active:scale-95"
+        >
+          <BookOpen className="w-3.5 h-3.5 text-slate-600" />
+          <span>3-Page Sample</span>
+        </button>
+
+        {isUnlocked ? (
+          <a
+            href={bundle.driveFolderLink || 'https://drive.google.com'}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex items-center justify-center gap-1.5 py-2 px-2.5 rounded-xl bg-[#0F9D58] hover:bg-[#0c8249] text-white text-xs font-black shadow-xs transition-transform active:scale-95"
+          >
+            <ExternalLink className="w-3.5 h-3.5" />
+            <span>Open Folder</span>
+          </a>
+        ) : (
+          <button
+            onClick={() => onBuy(bundle)}
+            className="flex items-center justify-center gap-1.5 py-2 px-2.5 rounded-xl bg-[#FF4D00] hover:bg-[#E04400] text-white text-xs font-black shadow-xs transition-transform active:scale-95"
+          >
+            <Zap className="w-3.5 h-3.5 fill-white" />
+            <span>Buy for ₹{bundle.price}</span>
+          </button>
         )}
       </div>
     </div>
   );
 };
-

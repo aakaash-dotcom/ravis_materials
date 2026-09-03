@@ -4,26 +4,36 @@ import { TutorConfig } from '../types';
 import { DEFAULT_TUTOR_CONFIG } from '../data/mockData';
 
 interface SettingsModalProps {
+  isOpen?: boolean;
   config: TutorConfig;
-  onSave: (newConfig: TutorConfig) => void;
+  onSave?: (newConfig: TutorConfig) => void;
+  onSaveConfig?: (newConfig: TutorConfig) => void;
   onClose: () => void;
-  onResetUnlocked: () => void;
-  unlockedCount: number;
+  onResetUnlocked?: () => void;
+  unlockedCount?: number;
 }
 
 export const SettingsModal: React.FC<SettingsModalProps> = ({
+  isOpen = true,
   config,
   onSave,
+  onSaveConfig,
   onClose,
   onResetUnlocked,
-  unlockedCount
+  unlockedCount = 0
 }) => {
   const [formData, setFormData] = useState<TutorConfig>({ ...config });
   const [savedSuccess, setSavedSuccess] = useState(false);
 
+  if (!isOpen) return null;
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    onSave(formData);
+    if (onSave) {
+      onSave(formData);
+    } else if (onSaveConfig) {
+      onSaveConfig(formData);
+    }
     setSavedSuccess(true);
     setTimeout(() => setSavedSuccess(false), 2000);
   };

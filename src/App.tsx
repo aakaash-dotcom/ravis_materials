@@ -1,42 +1,38 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { 
   Sparkles, 
-  Download, 
-  FileText, 
-  CheckCircle2, 
   Layers, 
   ArrowRight, 
-  Search, 
-  Share2, 
-  ExternalLink,
-  Flame,
-  Star,
-  Award,
-  Plus,
-  BookOpen,
-  X
+  ArrowLeft,
+  BookOpen, 
+  X, 
+  ShoppingBag, 
+  GraduationCap, 
+  CheckCircle2,
+  FileText
 } from 'lucide-react';
 import { Navbar } from './components/Navbar';
 import { MobileBottomNav } from './components/MobileBottomNav';
-import { FilterBar } from './components/FilterBar';
+import { ClassSelectionView } from './components/ClassSelectionView';
 import { FreeResourceCard } from './components/FreeResourceCard';
-import { PremiumBundleCard } from './components/PremiumBundleCard';
+import { WideCentumCard } from './components/WideCentumCard';
+import { EcommerceProductCard } from './components/EcommerceProductCard';
+import { CartDrawer } from './components/CartDrawer';
 import { PricingPlansView } from './components/PricingPlansView';
-import { ScoreCalculatorView } from './components/ScoreCalculatorView';
+import { ExamToolsView } from './components/ExamToolsView';
+import { TutorAdminView } from './components/TutorAdminView';
 import { PdfViewerModal } from './components/PdfViewerModal';
 import { UpiPaymentModal } from './components/UpiPaymentModal';
 import { MaduraiTrustSection } from './components/MaduraiTrustSection';
-import { MarksCalculatorModal } from './components/MarksCalculatorModal';
 import { SettingsModal } from './components/SettingsModal';
-import { AddPdfModal } from './components/AddPdfModal';
 import { Footer } from './components/Footer';
 
 import { FREE_RESOURCES, PREMIUM_BUNDLES, DEFAULT_TUTOR_CONFIG } from './data/mockData';
-import { AppPage, FreeResource, PremiumBundle, ClassLevel, Subject, ExamType, TutorConfig, Language } from './types';
+import { AppPage, FreeResource, PremiumBundle, ClassLevel, Subject, ExamType, TutorConfig, Language, CartItem } from './types';
 import { triggerConfetti } from './utils/payment';
 
 export default function App() {
-  // Config & Localization (Strictly Tanglish and Tamil)
+  // Config & Localization
   const [config, setConfig] = useState<TutorConfig>(() => {
     try {
       const saved = localStorage.getItem('ravis_tuition_config');
@@ -55,7 +51,46 @@ export default function App() {
   const [lang, setLang] = useState<Language>('tanglish');
   const [currentPage, setCurrentPage] = useState<AppPage>('study');
 
-  // Custom resources added by tutor via Google Drive link modal
+  // Selected Class: Can be null on initial load so students select their standard first!
+  const [selectedClass, setSelectedClass] = useState<ClassLevel | null>(() => {
+    try {
+      const saved = localStorage.getItem('ravis_selected_class');
+      if (saved && ['9th', '10th', '11th', '12th'].includes(saved)) {
+        return saved as ClassLevel;
+      }
+    } catch {}
+    return null;
+  });
+
+  // Filter States
+  const [selectedSubject, setSelectedSubject] = useState<'All' | Subject>('All');
+  const [selectedExam, setSelectedExam] = useState<'All' | ExamType>('All');
+  const [searchQuery, setSearchQuery] = useState('');
+  const [splitMode, setSplitMode] = useState<'split' | 'free_only' | 'premium_only'>('split');
+  const [activeReelCode, setActiveReelCode] = useState('');
+
+  // Cart Management
+  const [cartItems, setCartItems] = useState<CartItem[]>(() => {
+    try {
+      const saved = localStorage.getItem('ravis_cart_items');
+      return saved ? JSON.parse(saved) : [];
+    } catch {
+      return [];
+    }
+  });
+  const [isCartOpen, setIsCartOpen] = useState(false);
+
+  // Unlocked bundles
+  const [unlockedBundleIds, setUnlockedBundleIds] = useState<string[]>(() => {
+    try {
+      const saved = localStorage.getItem('ravis_tuition_unlocked');
+      return saved ? JSON.parse(saved) : [];
+    } catch {
+      return [];
+    }
+  });
+
+  // Custom resources added by tutor
   const [customResources, setCustomResources] = useState<FreeResource[]>(() => {
     try {
       const saved = localStorage.getItem('ravis_custom_resources');
@@ -65,72 +100,71 @@ export default function App() {
     }
   });
 
-  // Filter States
-  const [selectedClass, setSelectedClass] = useState<'All' | ClassLevel>('All');
-  const [selectedSubject, setSelectedSubject] = useState<'All' | Subject>('All');
-  const [selectedExam, setSelectedExam] = useState<'All' | ExamType>('All');
-  const [viewMode, setViewMode] = useState<'all' | 'free_only' | 'premium_only'>('all');
-  const [searchQuery, setSearchQuery] = useState('');
-  const [activeReelCode, setActiveReelCode] = useState('');
-
-  // Unlocked bundles
-  const [unlockedBundleIds, setUnlockedBundleIds] = useState<string[]>(() => {
-    const saved = localStorage.getItem('ravis_tuition_unlocked');
-    return saved ? JSON.parse(saved) : [];
-  });
-
   // Modals & Active Selections
-  const [activePreviewResource, setActivePreviewResource] = useState<FreeResource | null>(null);
   const [activePreviewBundle, setActivePreviewBundle] = useState<PremiumBundle | null>(null);
   const [activeBuyBundle, setActiveBuyBundle] = useState<PremiumBundle | null>(null);
-  const [isCalculatorOpen, setIsCalculatorOpen] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
-  const [isAddPdfOpen, setIsAddPdfOpen] = useState(false);
-  const [highlightedBundleId, setHighlightedBundleId] = useState<string | null>(null);
 
-  // Conversion Toast Trigger
-  const [conversionToast, setConversionToast] = useState<{
-    resource: FreeResource;
-    bundle: PremiumBundle;
-  } | null>(null);
+  // Persistence effects
+  useEffect(() => {
+    if (selectedClass) {
+      localStorage.setItem('ravis_selected_class', selectedClass);
+    }
+  }, [selectedClass]);
 
-  // Combine custom resources with default mock data
+  useEffect(() => {
+    localStorage.setItem('ravis_cart_items', JSON.stringify(cartItems));
+  }, [cartItems]);
+
+  const handleAddResource = (resource: FreeResource) => {
+    const updated = [resource, ...customResources];
+    setCustomResources(updated);
+    localStorage.setItem('ravis_custom_resources', JSON.stringify(updated));
+  };
+
+  const handleDeleteResource = (id: string) => {
+    const updated = customResources.filter((r) => r.id !== id);
+    setCustomResources(updated);
+    localStorage.setItem('ravis_custom_resources', JSON.stringify(updated));
+  };
+
+  const handleSaveConfig = (newConfig: TutorConfig) => {
+    setConfig(newConfig);
+    localStorage.setItem('ravis_tuition_config', JSON.stringify(newConfig));
+  };
+
+  // Combine custom resources with mock resources
   const allFreeResources = useMemo(() => {
     return [...customResources, ...FREE_RESOURCES];
   }, [customResources]);
 
-  // Parse URL search params (e.g. ?subject=Economics&class=12th&exam=Quarterly or ?pdf=res-eco12 or ?code=ECO12)
+  // URL query parameter parsing
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const code = params.get('pdf') || params.get('code');
     const page = params.get('page') || params.get('tab');
     const cls = params.get('class');
     const sub = params.get('subject');
-    const ex = params.get('exam');
 
     if (code) {
       setActiveReelCode(code.toUpperCase());
     }
-    if (page && (page === 'study' || page === 'pricing' || page === 'calculator' || page === 'trust')) {
+    if (page && ['study', 'pricing', 'tools', 'calculator', 'trust', 'tutor'].includes(page)) {
       setCurrentPage(page as AppPage);
     }
     if (cls) {
-      if (cls === '10' || cls === '10th') setSelectedClass('10th');
+      if (cls === '9' || cls === '9th') setSelectedClass('9th');
+      else if (cls === '10' || cls === '10th') setSelectedClass('10th');
       else if (cls === '11' || cls === '11th') setSelectedClass('11th');
       else if (cls === '12' || cls === '12th') setSelectedClass('12th');
     }
     if (sub) {
-      const matchSub = allFreeResources.find(r => r.subject.toLowerCase() === sub.toLowerCase());
-      if (matchSub) setSelectedSubject(matchSub.subject);
-    }
-    if (ex) {
-      if (ex.toLowerCase().includes('quarter')) setSelectedExam('Quarterly');
-      else if (ex.toLowerCase().includes('half')) setSelectedExam('Half-Yearly');
-      else if (ex.toLowerCase().includes('public') || ex.toLowerCase().includes('board')) setSelectedExam('Public Board');
+      const match = allFreeResources.find((r) => r.subject.toLowerCase() === sub.toLowerCase());
+      if (match) setSelectedSubject(match.subject);
     }
   }, [allFreeResources]);
 
-  // Matching resource for active Reel Code / URL parameter (From Auto DM)
+  // Matching reel resource
   const matchingReelResource = useMemo(() => {
     if (!activeReelCode) return undefined;
     return allFreeResources.find(
@@ -139,121 +173,126 @@ export default function App() {
     );
   }, [activeReelCode, allFreeResources]);
 
-  const relatedReelBundle = useMemo(() => {
-    if (!matchingReelResource?.relatedBundleId) return undefined;
-    return PREMIUM_BUNDLES.find((b) => b.id === matchingReelResource.relatedBundleId);
-  }, [matchingReelResource]);
+  // Available subjects for the selected class
+  const availableSubjects = useMemo(() => {
+    if (!selectedClass) return [];
+    const subs = new Set<Subject>();
+    allFreeResources
+      .filter((r) => r.classLevel === selectedClass)
+      .forEach((r) => subs.add(r.subject));
+    return Array.from(subs);
+  }, [selectedClass, allFreeResources]);
 
-  // Save config changes
-  const handleSaveConfig = (newConfig: TutorConfig) => {
-    setConfig(newConfig);
-    localStorage.setItem('ravis_tuition_config', JSON.stringify(newConfig));
+  // Display sections: Group free resources into 4-packs per subject with their matching Centum bundle
+  const displaySections = useMemo(() => {
+    if (!selectedClass) return [];
+
+    const subjectsToProcess = selectedSubject === 'All'
+      ? availableSubjects
+      : [selectedSubject];
+
+    return subjectsToProcess.map((subj) => {
+      const resources = allFreeResources.filter(
+        (r) => r.classLevel === selectedClass && r.subject === subj
+      );
+      // Find matching bundle for this subject and class
+      const bundle = PREMIUM_BUNDLES.find(
+        (b) => b.classLevel === selectedClass && b.subjects.includes(subj)
+      ) || PREMIUM_BUNDLES.find((b) => b.classLevel === selectedClass);
+
+      return {
+        subject: subj,
+        resources,
+        bundle,
+      };
+    }).filter((s) => s.resources.length > 0);
+  }, [selectedClass, selectedSubject, availableSubjects, allFreeResources]);
+
+  // Filtered resources for the selected class and subject
+  const filteredFreeResources = useMemo(() => {
+    return allFreeResources.filter((res) => {
+      if (selectedClass && res.classLevel !== selectedClass) return false;
+      if (selectedSubject !== 'All' && res.subject !== selectedSubject) return false;
+      return true;
+    });
+  }, [allFreeResources, selectedClass, selectedSubject]);
+
+  // Filtered bundles for the selected class and subject
+  const filteredPremiumBundles = useMemo(() => {
+    return PREMIUM_BUNDLES.filter((bundle) => {
+      if (selectedClass && bundle.classLevel !== selectedClass) return false;
+      if (selectedSubject !== 'All' && !bundle.subjects.includes(selectedSubject)) return false;
+      return true;
+    });
+  }, [selectedClass, selectedSubject]);
+
+  // Free PDF Download Tracker
+  const handleDownloadFreeResource = (resource: FreeResource) => {
+    resource.downloadCount += 1;
+    // triggerConfetti for fun student delight
+    triggerConfetti();
   };
 
-  // Reset unlocked purchases for testing
-  const handleResetUnlocked = () => {
-    setUnlockedBundleIds([]);
-    localStorage.removeItem('ravis_tuition_unlocked');
-  };
-
-  // Handle successful purchase/unlock
-  const handlePaymentSuccess = (bundleId: string) => {
-    if (!unlockedBundleIds.includes(bundleId)) {
-      const updated = [...unlockedBundleIds, bundleId];
-      setUnlockedBundleIds(updated);
-      localStorage.setItem('ravis_tuition_unlocked', JSON.stringify(updated));
+  // Cart actions
+  const handleAddToCart = (bundle: PremiumBundle) => {
+    const exists = cartItems.some((i) => i.bundle.id === bundle.id);
+    if (!exists) {
+      setCartItems((prev) => [...prev, { bundle, addedAt: Date.now() }]);
+      triggerConfetti();
     }
+    setIsCartOpen(true);
+  };
+
+  const handleRemoveFromCart = (bundleId: string) => {
+    setCartItems((prev) => prev.filter((i) => i.bundle.id !== bundleId));
+  };
+
+  // Cart checkout via UPI
+  const handleCartCheckout = (bundles: PremiumBundle[], totalAmount: number) => {
+    setIsCartOpen(false);
+    if (bundles.length === 1) {
+      setActiveBuyBundle(bundles[0]);
+    } else {
+      // Composite bundle representing the cart
+      const combo: PremiumBundle = {
+        ...bundles[0],
+        id: bundles.map((b) => b.id).join('_'),
+        title: `Study Cart (${bundles.length} Centum Books)`,
+        price: totalAmount,
+        originalPrice: bundles.reduce((s, b) => s + b.originalPrice, 0),
+        savingsPercent: 75,
+        tagline: `${bundles.map((b) => b.title).join(' + ')}`,
+        tanglishTagline: 'Complete Cart Pack with Google Drive Master Folders',
+      };
+      setActiveBuyBundle(combo);
+    }
+  };
+
+  // Payment success handler
+  const handlePaymentSuccess = (bundleId: string) => {
+    // If it's a composite combo, unlock all constituent bundles
+    const idsToUnlock = bundleId.includes('_') ? bundleId.split('_') : [bundleId];
+    const newUnlocked = Array.from(new Set([...unlockedBundleIds, ...idsToUnlock]));
+    setUnlockedBundleIds(newUnlocked);
+    localStorage.setItem('ravis_tuition_unlocked', JSON.stringify(newUnlocked));
+
+    // Clear matching items from cart
+    setCartItems((prev) => prev.filter((i) => !idsToUnlock.includes(i.bundle.id)));
+
+    // Open Google Drive folder for student
+    const purchased = PREMIUM_BUNDLES.find((b) => idsToUnlock.includes(b.id));
+    if (purchased && purchased.driveFolderLink) {
+      window.open(purchased.driveFolderLink, '_blank');
+    }
+
     setActiveBuyBundle(null);
   };
 
-  // Filtered Free Resources
-  const filteredFreeResources = useMemo(() => {
-    return allFreeResources.filter((res) => {
-      // Reel code match
-      if (activeReelCode && res.reelCode?.toUpperCase() !== activeReelCode.toUpperCase() && res.id !== activeReelCode) {
-        return false;
-      }
-      // Class filter
-      if (selectedClass !== 'All' && res.classLevel !== selectedClass) {
-        return false;
-      }
-      // Subject filter
-      if (selectedSubject !== 'All' && res.subject !== selectedSubject) {
-        return false;
-      }
-      // Exam filter
-      if (selectedExam !== 'All' && res.examType && res.examType !== selectedExam) {
-        return false;
-      }
-      // Search query
-      if (searchQuery.trim()) {
-        const q = searchQuery.toLowerCase();
-        const matchTitle = res.title.toLowerCase().includes(q) || res.tanglishTitle.toLowerCase().includes(q);
-        const matchChapter = res.chapter.toLowerCase().includes(q);
-        const matchCode = res.reelCode?.toLowerCase().includes(q);
-        if (!matchTitle && !matchChapter && !matchCode) return false;
-      }
-      return true;
-    });
-  }, [allFreeResources, selectedClass, selectedSubject, selectedExam, searchQuery, activeReelCode]);
-
-  // Filtered Premium Bundles
-  const filteredPremiumBundles = useMemo(() => {
-    return PREMIUM_BUNDLES.filter((bundle) => {
-      // Class filter
-      if (selectedClass !== 'All' && bundle.classLevel !== selectedClass) {
-        return false;
-      }
-      // Subject filter
-      if (selectedSubject !== 'All' && !bundle.subjects.includes(selectedSubject as Subject)) {
-        return false;
-      }
-      // Exam filter
-      if (selectedExam !== 'All' && bundle.examType && bundle.examType !== selectedExam) {
-        return false;
-      }
-      // Search query
-      if (searchQuery.trim()) {
-        const q = searchQuery.toLowerCase();
-        const matchTitle = bundle.title.toLowerCase().includes(q) || bundle.tagline.toLowerCase().includes(q);
-        if (!matchTitle) return false;
-      }
-      return true;
-    });
-  }, [selectedClass, selectedSubject, selectedExam, searchQuery]);
-
-  // Handle Free Download with the Natural Bridge trigger
-  const handleDownloadFreeResource = (resource: FreeResource) => {
-    triggerConfetti();
-    const related = PREMIUM_BUNDLES.find((b) => b.id === resource.relatedBundleId);
-    if (related && !unlockedBundleIds.includes(related.id)) {
-      setConversionToast({ resource, bundle: related });
-      setTimeout(() => {
-        setConversionToast((prev) => (prev?.resource.id === resource.id ? null : prev));
-      }, 8000);
-    }
-  };
-
-  // Bridge action: jump to bundle smoothly
-  const handleJumpToBundle = (bundle: PremiumBundle) => {
-    if (currentPage !== 'study') {
-      setCurrentPage('study');
-    }
-    setHighlightedBundleId(bundle.id);
-    setTimeout(() => {
-      const element = document.getElementById(bundle.id);
-      if (element) {
-        element.scrollIntoView({ behavior: 'smooth', block: 'center' });
-      }
-    }, 100);
-    setTimeout(() => {
-      setHighlightedBundleId(null);
-    }, 4000);
-  };
+  const cartItemIds = useMemo(() => cartItems.map((i) => i.bundle.id), [cartItems]);
 
   return (
     <div className="min-h-screen bg-[#FFFBEB] text-[#1F2937] flex flex-col font-sans selection:bg-[#FFBB00] selection:text-black">
-      {/* Top Navbar with Tab Navigation and Strict 2-Language Toggle */}
+      {/* Top Navbar with Class Switcher and Cart Drawer Trigger */}
       <Navbar
         config={config}
         lang={lang}
@@ -262,320 +301,241 @@ export default function App() {
         setCurrentPage={setCurrentPage}
         onNavigate={setCurrentPage}
         onOpenSettings={() => setIsSettingsOpen(true)}
-        onOpenCalculator={() => setCurrentPage('calculator')}
-        onOpenAddPdf={() => setIsAddPdfOpen(true)}
+        onOpenTutorAdmin={() => setCurrentPage('tutor')}
         unlockedCount={unlockedBundleIds.length}
+        selectedClass={selectedClass}
+        onChangeClass={() => setSelectedClass(null)}
+        cartCount={cartItems.length}
+        onOpenCart={() => setIsCartOpen(true)}
       />
 
       {/* Main Container */}
-      <main className="flex-1 max-w-7xl mx-auto w-full px-3.5 sm:px-6 py-3.5 sm:py-6 space-y-4 sm:space-y-6 pb-24 md:pb-10">
-        {/* PAGE 1: STUDY MATERIAL & FREE PDFS */}
-        {currentPage === 'study' && (
-          <div className="space-y-3.5 sm:space-y-4 animate-in fade-in duration-200">
+      <main className="flex-1 max-w-7xl mx-auto w-full px-2.5 sm:px-4 py-3 sm:py-6 space-y-4 pb-24 md:pb-10">
+        
+        {/* STEP 1: INITIAL CLASS SELECTION SCREEN (When no class is selected yet) */}
+        {!selectedClass && currentPage === 'study' && (
+          <div className="animate-in fade-in duration-200">
+            <ClassSelectionView
+              onSelectClass={(cls) => setSelectedClass(cls)}
+              lang={lang}
+              config={config}
+            />
+          </div>
+        )}
+
+        {/* STEP 2: CLASSROOM DASHBOARD (When student selects 9th, 10th, 11th, or 12th) */}
+        {selectedClass && currentPage === 'study' && (
+          <div className="space-y-3 sm:space-y-4 animate-in fade-in duration-200">
             
-            {/* INSTAGRAM REEL / AUTO DM DIRECT MATCH CARD (Compact, at top only if reel matched) */}
+            {/* MINIMAL TOP BAR: Back Button + Standard Title + Subject Dropdown Filter */}
+            <div className="flex items-center justify-between gap-3 bg-white p-2.5 sm:p-3 rounded-2xl border-2 border-slate-200 shadow-xs">
+              <div className="flex items-center gap-2 sm:gap-3">
+                <button
+                  onClick={() => {
+                    setSelectedClass(null);
+                    setSelectedSubject('All');
+                  }}
+                  className="px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-900 text-xs font-black flex items-center gap-1.5 transition-all active:scale-95 shadow-2xs cursor-pointer"
+                >
+                  <ArrowLeft className="w-4 h-4" />
+                  <span>Back</span>
+                </button>
+                <h2 className="text-sm sm:text-base font-black text-slate-900 leading-tight">
+                  {selectedClass} Standard
+                </h2>
+              </div>
+
+              {/* Subject Dropdown Filter (The ONLY filter needed) */}
+              <div className="flex items-center gap-1.5 sm:gap-2">
+                <label htmlFor="subject-select" className="text-xs font-black text-slate-600 hidden sm:inline">
+                  Subject:
+                </label>
+                <select
+                  id="subject-select"
+                  value={selectedSubject}
+                  onChange={(e) => setSelectedSubject(e.target.value as Subject | 'All')}
+                  aria-label="Filter by subject"
+                  className="text-xs font-black bg-white border-2 border-slate-300 rounded-xl px-2.5 sm:px-3 py-1.5 text-slate-800 focus:border-[#FF4D00] focus:outline-none cursor-pointer"
+                >
+                  <option value="All">All Subjects</option>
+                  {availableSubjects.map((sub) => (
+                    <option key={sub} value={sub}>
+                      {sub}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+
+            {/* INSTAGRAM REEL MATCH BANNER (If opened from reel URL) */}
             {matchingReelResource && (
-              <div className="p-3 sm:p-4 rounded-2xl bg-gradient-to-r from-amber-100 via-orange-100 to-amber-100 border-2 border-amber-400 shadow-sm flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
-                <div className="flex items-start gap-2.5">
-                  <div className="w-8 h-8 rounded-xl bg-[#FF4D00] text-white flex items-center justify-center font-black shrink-0 shadow-xs">
-                    <Sparkles className="w-4 h-4" />
-                  </div>
-                  <div>
-                    <div className="flex items-center gap-1.5 flex-wrap">
-                      <span className="text-[10px] font-black uppercase tracking-wider text-[#FF4D00] bg-white px-2 py-0.5 rounded-md border border-amber-300">
-                        Instagram Reel Match: {matchingReelResource.reelCode || matchingReelResource.subject}
-                      </span>
-                      <span className="text-[10px] font-bold text-gray-600">
-                        {matchingReelResource.classLevel} • {matchingReelResource.examType || 'Quarterly'}
-                      </span>
-                    </div>
-                    <h3 className="text-sm sm:text-base font-black text-slate-900 leading-tight mt-0.5">
-                      {matchingReelResource.title}
-                    </h3>
+              <div className="p-2.5 rounded-xl bg-amber-50 border border-amber-300 flex items-center justify-between gap-2 shadow-xs">
+                <div className="flex items-center gap-2 min-w-0">
+                  <Sparkles className="w-4 h-4 text-[#FF4D00] shrink-0" />
+                  <div className="truncate text-xs font-black text-slate-900">
+                    <span className="text-[#FF4D00]">Reel {matchingReelResource.reelCode}:</span> {matchingReelResource.title}
                   </div>
                 </div>
-
-                <div className="flex items-center gap-2 w-full sm:w-auto flex-wrap justify-end">
-                  <a
-                    href={matchingReelResource.driveLink || 'https://drive.google.com'}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    onClick={() => handleDownloadFreeResource(matchingReelResource)}
-                    className="flex-1 sm:flex-initial flex items-center justify-center gap-1.5 px-3.5 py-2 rounded-xl bg-[#0F9D58] hover:bg-[#0c8249] text-white text-xs font-black shadow-xs transition-transform active:scale-95"
-                  >
-                    <ExternalLink className="w-3.5 h-3.5" />
-                    <span>Open Google Drive (Free)</span>
-                  </a>
-
-                  {relatedReelBundle && (
-                    <button
-                      onClick={() => setActivePreviewBundle(relatedReelBundle)}
-                      className="flex-1 sm:flex-initial flex items-center justify-center gap-1 px-3 py-2 rounded-xl bg-[#FF4D00] hover:bg-[#E04400] text-white text-xs font-black shadow-xs transition-transform active:scale-95"
-                    >
-                      <BookOpen className="w-3.5 h-3.5" />
-                      <span>3-Page Sample (₹{relatedReelBundle.price})</span>
-                    </button>
-                  )}
-
-                  <button
-                    onClick={() => setActiveReelCode('')}
-                    className="p-1.5 rounded-lg text-gray-500 hover:text-black hover:bg-white/50"
-                    title="View All Material"
-                  >
-                    <X className="w-4 h-4" />
-                  </button>
-                </div>
+                <button
+                  onClick={() => handleDownloadFreeResource(matchingReelResource)}
+                  className="px-3 py-1 rounded-lg bg-[#0F9D58] text-white text-xs font-black shrink-0 shadow-xs cursor-pointer"
+                >
+                  Open PDF
+                </button>
               </div>
             )}
 
-            {/* COMPACT FILTER BAR */}
-            <FilterBar
-              selectedClass={selectedClass}
-              setSelectedClass={setSelectedClass}
-              selectedSubject={selectedSubject}
-              setSelectedSubject={setSelectedSubject}
-              selectedExam={selectedExam}
-              setSelectedExam={setSelectedExam}
-              viewMode={viewMode}
-              setViewMode={setViewMode}
-              searchQuery={searchQuery}
-              setSearchQuery={setSearchQuery}
-              freeCount={filteredFreeResources.length}
-              premiumCount={filteredPremiumBundles.length}
-            />
+            {/* 4 FREE BOXES + 1 WIDE CENTUM CARD FOR EVERY 4 BOXES */}
+            {displaySections.length === 0 ? (
+              <div className="p-8 text-center bg-white rounded-2xl border-2 border-dashed border-slate-200 text-slate-500 text-xs font-bold">
+                No study material found for this subject.
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {displaySections.map((section) => {
+                  const chunks: FreeResource[][] = [];
+                  for (let i = 0; i < section.resources.length; i += 4) {
+                    chunks.push(section.resources.slice(i, i + 4));
+                  }
 
-            {/* QUICK ACTIONS STRIP: Count + Add PDF for Tutor */}
-            <div className="flex items-center justify-between gap-2 px-1 text-xs">
-              <span className="font-extrabold text-slate-700">
-                {viewMode === 'premium_only' ? (
-                  <span>Centum Booster Packs ({filteredPremiumBundles.length})</span>
-                ) : (
-                  <span>Free Study Material ({filteredFreeResources.length} PDFs)</span>
-                )}
-              </span>
+                  return (
+                    <div key={section.subject} className="space-y-3">
+                      {chunks.map((chunk, chunkIdx) => (
+                        <React.Fragment key={`${section.subject}-chunk-${chunkIdx}`}>
+                          {/* 4 Free PDF boxes side by side (2x2 on mobile, 4 in a row on desktop) */}
+                          <div className="grid grid-cols-2 md:grid-cols-4 gap-2.5 sm:gap-3">
+                            {chunk.map((resource) => (
+                              <FreeResourceCard
+                                key={resource.id}
+                                resource={resource}
+                                onDownload={handleDownloadFreeResource}
+                                lang={lang}
+                              />
+                            ))}
+                          </div>
 
-              <button
-                onClick={() => setIsAddPdfOpen(true)}
-                className="flex items-center gap-1 text-[11px] font-black text-emerald-800 bg-emerald-100 hover:bg-emerald-200 px-2.5 py-1 rounded-lg transition-colors border border-emerald-300"
-              >
-                <Plus className="w-3.5 h-3.5" />
-                <span>+ Add Drive Link (Tutor)</span>
-              </button>
-            </div>
-
-            {/* FREE RESOURCES SECTION (Compact Cards for High Mobile Screen Density) */}
-            {(viewMode === 'all' || viewMode === 'free_only') && (
-              <section className="space-y-3">
-                {filteredFreeResources.length === 0 ? (
-                  <div className="p-6 text-center bg-white rounded-2xl border-2 border-amber-200 text-gray-500 text-xs font-bold shadow-xs">
-                    {lang === 'tanglish'
-                      ? 'No material found for this filter. Try selecting "All" or adding a PDF.'
-                      : 'தேர்வு செய்த பாடப்பிரிவில் கையேடுகள் இல்லை. வகுப்பை மாற்றி முயற்சிக்கவும்.'}
-                  </div>
-                ) : (
-                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
-                    {filteredFreeResources.map((res) => {
-                      const relatedBundle = PREMIUM_BUNDLES.find((b) => b.id === res.relatedBundleId);
-                      return (
-                        <FreeResourceCard
-                          key={res.id}
-                          resource={res}
-                          relatedBundle={relatedBundle}
-                          onPreview={(r) => setActivePreviewResource(r)}
-                          onDownload={handleDownloadFreeResource}
-                          onSelectBundle={(bundle) => setActiveBuyBundle(bundle)}
-                          onPreviewSample={(bundle) => setActivePreviewBundle(bundle)}
-                          lang={lang}
-                        />
-                      );
-                    })}
-                  </div>
-                )}
-              </section>
+                          {/* 5th Box: Big Wide Centum Box covering all 4 boxes at the bottom */}
+                          {section.bundle && chunkIdx === 0 && (
+                            <WideCentumCard
+                              bundle={section.bundle}
+                              lang={lang}
+                              isUnlocked={unlockedBundleIds.includes(section.bundle.id)}
+                              isInCart={cartItemIds.includes(section.bundle.id)}
+                              onPreviewSample={(b) => setActivePreviewBundle(b)}
+                              onAddToCart={handleAddToCart}
+                              onBuyNow={(b) => setActiveBuyBundle(b)}
+                            />
+                          )}
+                        </React.Fragment>
+                      ))}
+                    </div>
+                  );
+                })}
+              </div>
             )}
-
-            {/* PREMIUM CENTUM BUNDLES SECTION */}
-            {(viewMode === 'all' || viewMode === 'premium_only') && (
-              <section className="space-y-3 pt-2">
-                <div className="flex items-center justify-between gap-2 border-t-2 border-amber-200/80 pt-3">
-                  <div>
-                    <h2 className="text-base sm:text-lg font-black text-[#1F2937] tracking-tight">
-                      {lang === 'tanglish'
-                        ? 'Centum Booster Bundles (₹49 Pro)'
-                        : 'சென்டம் பூஸ்டர் வினா தொகுப்புகள் (₹49)'}
-                    </h2>
-                    <p className="text-[11px] text-gray-600 font-semibold">
-                      Twist questions + step marks + lifetime Google Drive complete folder.
-                    </p>
-                  </div>
-                  <button
-                    onClick={() => setCurrentPage('pricing')}
-                    className="text-xs font-black text-[#FF4D00] hover:underline shrink-0"
-                  >
-                    Compare Tiers →
-                  </button>
-                </div>
-
-                {filteredPremiumBundles.length === 0 ? (
-                  <div className="p-6 text-center bg-white rounded-2xl border-2 border-amber-200 text-gray-500 text-xs font-bold shadow-xs">
-                    No bundles match this filter. Check all classes for complete packs!
-                  </div>
-                ) : (
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    {filteredPremiumBundles.map((bundle) => {
-                      const isUnlocked = unlockedBundleIds.includes(bundle.id);
-                      return (
-                        <PremiumBundleCard
-                          key={bundle.id}
-                          bundle={bundle}
-                          isUnlocked={isUnlocked}
-                          onPreviewSample={(b) => setActivePreviewBundle(b)}
-                          onBuy={(b) => setActiveBuyBundle(b)}
-                          lang={lang}
-                          isHighlighted={highlightedBundleId === bundle.id}
-                        />
-                      );
-                    })}
-                  </div>
-                )}
-              </section>
-            )}
-
-            {/* Madurai Trust Strip */}
-            <div className="pt-2">
-              <MaduraiTrustSection config={config} lang={lang} />
-            </div>
           </div>
         )}
 
-        {/* PAGE 2: PRICING & TIERS (Free vs Pro vs Ultra Pro) */}
+        {/* PAGE 2: DEDICATED CENTUM PACKS STORE (Full E-Commerce Catalog) */}
         {currentPage === 'pricing' && (
           <div className="animate-in fade-in duration-200">
             <PricingPlansView
+              lang={lang}
               bundles={PREMIUM_BUNDLES}
-              unlockedBundleIds={unlockedBundleIds}
               onSelectBundle={(bundle) => setActiveBuyBundle(bundle)}
-              onPreviewSample={(bundle) => setActivePreviewBundle(bundle)}
-              lang={lang}
               config={config}
-              onGoToStudy={() => setCurrentPage('study')}
+              unlockedBundleIds={unlockedBundleIds}
+              onPreviewSample={(bundle) => setActivePreviewBundle(bundle)}
+              onAddToCart={handleAddToCart}
+              cartItemIds={cartItemIds}
+              initialClass={selectedClass || '12th'}
+              onOpenCart={() => setIsCartOpen(true)}
             />
           </div>
         )}
 
-        {/* PAGE 3: SCORE CALCULATOR (Dedicated View with Exam Countdown) */}
-        {currentPage === 'calculator' && (
+        {/* PAGE 3: EXAM TOOLS (Countdown + 95+ Calculator + 180-min Exam Strategy) */}
+        {(currentPage === 'tools' || currentPage === 'calculator') && (
           <div className="animate-in fade-in duration-200">
-            <ScoreCalculatorView
+            <ExamToolsView
               lang={lang}
               bundles={PREMIUM_BUNDLES}
-              onSelectBundle={(bundleId) => {
-                const b = PREMIUM_BUNDLES.find((p) => p.id === bundleId);
-                if (b) setActiveBuyBundle(b);
-              }}
+              onSelectBundle={(bundle) => setActiveBuyBundle(bundle)}
             />
           </div>
         )}
 
-        {/* PAGE 4: RESULTS & TRUST (Dedicated View) */}
+        {/* PAGE 4: RESULTS & TRUST */}
         {currentPage === 'trust' && (
           <div className="animate-in fade-in duration-200 space-y-6">
             <MaduraiTrustSection config={config} lang={lang} />
           </div>
         )}
+
+        {/* PAGE 5: TUTOR ADMIN PORTAL (PIN Protected: 1999 or 1234) */}
+        {currentPage === 'tutor' && (
+          <div className="animate-in fade-in duration-200">
+            <TutorAdminView
+              config={config}
+              onSaveConfig={handleSaveConfig}
+              customResources={customResources}
+              onAddResource={handleAddResource}
+              onDeleteResource={handleDeleteResource}
+              bundles={PREMIUM_BUNDLES}
+              onBackToStudentView={() => setCurrentPage('study')}
+            />
+          </div>
+        )}
       </main>
 
       {/* Footer */}
-      <Footer config={config} lang={lang} />
+      <Footer
+        config={config}
+        lang={lang}
+        onOpenTutorAdmin={() => setCurrentPage('tutor')}
+      />
 
-      {/* MOBILE BOTTOM NAVIGATION (Sticky on mobile, 1-tap switching) */}
+      {/* MOBILE BOTTOM NAVIGATION */}
       <MobileBottomNav
         currentPage={currentPage}
         setCurrentPage={setCurrentPage}
         onNavigate={setCurrentPage}
         lang={lang}
         unlockedCount={unlockedBundleIds.length}
+        cartCount={cartItems.length}
+        onOpenCart={() => setIsCartOpen(true)}
       />
 
-      {/* NATURAL CONVERSION TOAST (Triggered when a free PDF is downloaded) */}
-      {conversionToast && (
-        <aside
-          role="status"
-          aria-live="polite"
-          className="fixed bottom-20 md:bottom-5 right-4 left-4 sm:left-auto sm:right-5 z-40 max-w-sm bg-white border-4 border-[#7C3AED] rounded-3xl p-5 shadow-[8px_8px_0px_#7C3AED] animate-in fade-in slide-in-from-bottom-6 duration-300 text-[#1F2937]"
-        >
-          <div className="flex items-start justify-between gap-3">
-            <div className="w-9 h-9 rounded-2xl bg-emerald-100 border-2 border-emerald-300 flex items-center justify-center text-emerald-700 shrink-0 font-bold">
-              <CheckCircle2 className="w-5 h-5" />
-            </div>
-            <div className="flex-1">
-              <span className="text-xs font-black text-emerald-800 block">
-                {lang === 'tanglish' ? 'Free PDF Google Drive-la Ready! 🚀' : 'இலவச பிடிஎப் கூகுள் டிரைவில் தயார்! 🚀'}
-              </span>
-              <p className="text-xs text-gray-700 font-semibold mt-1 leading-snug">
-                {lang === 'tanglish' ? (
-                  <>
-                    Exam hall-la twist question vantha? Ravi Sir's <strong className="text-black">{conversionToast.bundle.title}</strong> has all 25 hidden twist models for just <strong className="text-[#FF4D00]">₹{conversionToast.bundle.price}</strong>!
-                  </>
-                ) : (
-                  <>
-                    கட்டாய வினாக்களுக்கு Ravi Sir-ன் <strong className="text-black">{conversionToast.bundle.title}</strong> தொகுப்பை பெறுங்கள் (மட்டும் <span className="text-[#FF4D00] font-black">₹{conversionToast.bundle.price}</span>).
-                  </>
-                )}
-              </p>
-              <div className="mt-3 flex items-center gap-2">
-                <button
-                  onClick={() => {
-                    setActiveBuyBundle(conversionToast.bundle);
-                    setConversionToast(null);
-                  }}
-                  className="px-3.5 py-2 rounded-xl bg-[#FF4D00] hover:bg-[#E04400] text-white font-black text-xs shadow-md active:scale-95 transition-all"
-                >
-                  Inspect Pack (₹{conversionToast.bundle.price})
-                </button>
-                <button
-                  onClick={() => setConversionToast(null)}
-                  className="px-2.5 py-2 text-xs font-bold text-gray-500 hover:text-black transition-colors"
-                >
-                  Maybe later
-                </button>
-              </div>
-            </div>
-            <button
-              onClick={() => setConversionToast(null)}
-              className="text-gray-400 hover:text-gray-700 p-1"
-            >
-              <span className="sr-only">Close</span>
-              &times;
-            </button>
-          </div>
-        </aside>
-      )}
+      {/* E-COMMERCE CART SLIDE-OVER DRAWER */}
+      <CartDrawer
+        isOpen={isCartOpen}
+        onClose={() => setIsCartOpen(false)}
+        items={cartItems}
+        onRemoveItem={handleRemoveFromCart}
+        onCheckout={handleCartCheckout}
+        onExplore={() => {
+          setIsCartOpen(false);
+          setCurrentPage('pricing');
+        }}
+      />
 
-      {/* PDF SNEAK PEEK & 3-PAGE SAMPLE VIEWER */}
-      {(activePreviewResource || activePreviewBundle) && (
+      {/* PDF SAMPLE PREVIEW MODAL */}
+      {activePreviewBundle && (
         <PdfViewerModal
-          resource={activePreviewResource}
           bundle={activePreviewBundle}
-          isUnlocked={activePreviewBundle ? unlockedBundleIds.includes(activePreviewBundle.id) : false}
-          onClose={() => {
-            setActivePreviewResource(null);
+          isOpen={true}
+          onClose={() => setActivePreviewBundle(null)}
+          onUnlock={() => {
+            const bundle = activePreviewBundle;
             setActivePreviewBundle(null);
+            setActiveBuyBundle(bundle);
           }}
-          onUpgradeToBundle={(target) => {
-            setActivePreviewResource(null);
-            setActivePreviewBundle(null);
-            setActiveBuyBundle(target);
-          }}
-          relatedBundle={
-            activePreviewResource
-              ? PREMIUM_BUNDLES.find((b) => b.id === activePreviewResource.relatedBundleId)
-              : null
-          }
+          isUnlocked={unlockedBundleIds.includes(activePreviewBundle.id)}
+          lang={lang}
         />
       )}
 
-      {/* ZERO-FEE UPI PAYMENT MODAL */}
+      {/* UPI PAYMENT MODAL WITH INSTANT GOOGLE DRIVE UNLOCK */}
       {activeBuyBundle && (
         <UpiPaymentModal
           bundle={activeBuyBundle}
@@ -586,40 +546,19 @@ export default function App() {
         />
       )}
 
-      {/* 95+ MARKS CALCULATOR MODAL */}
-      {isCalculatorOpen && (
-        <MarksCalculatorModal
-          onClose={() => setIsCalculatorOpen(false)}
-          onSelectBundle={(bundleId) => {
-            const b = PREMIUM_BUNDLES.find((p) => p.id === bundleId);
-            if (b) handleJumpToBundle(b);
-          }}
-          lang={lang}
-        />
-      )}
-
-      {/* TUTOR CONTROL SETTINGS MODAL */}
+      {/* SETTINGS MODAL */}
       {isSettingsOpen && (
         <SettingsModal
+          isOpen={isSettingsOpen}
+          onClose={() => setIsSettingsOpen(false)}
           config={config}
           onSave={handleSaveConfig}
-          onClose={() => setIsSettingsOpen(false)}
-          onResetUnlocked={handleResetUnlocked}
+          onSaveConfig={handleSaveConfig}
           unlockedCount={unlockedBundleIds.length}
-        />
-      )}
-
-      {/* ADD NEW PDF MODAL FOR TUTOR */}
-      {isAddPdfOpen && (
-        <AddPdfModal
-          onClose={() => setIsAddPdfOpen(false)}
-          onAddResource={(newRes) => {
-            const updated = [newRes, ...customResources];
-            setCustomResources(updated);
-            localStorage.setItem('ravis_custom_resources', JSON.stringify(updated));
+          onResetUnlocked={() => {
+            setUnlockedBundleIds([]);
+            localStorage.removeItem('ravis_tuition_unlocked');
           }}
-          bundles={PREMIUM_BUNDLES}
-          lang={lang}
         />
       )}
     </div>

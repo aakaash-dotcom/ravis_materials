@@ -1,5 +1,5 @@
 import React from 'react';
-import { Search, Sparkles, Download, Layers } from 'lucide-react';
+import { Search, RotateCcw, Sparkles } from 'lucide-react';
 import { ClassLevel, Subject, ExamType } from '../types';
 
 interface FilterBarProps {
@@ -9,26 +9,23 @@ interface FilterBarProps {
   setSelectedSubject: (s: 'All' | Subject) => void;
   selectedExam?: 'All' | ExamType;
   setSelectedExam?: (e: 'All' | ExamType) => void;
-  viewMode: 'all' | 'free_only' | 'premium_only';
-  setViewMode: (v: 'all' | 'free_only' | 'premium_only') => void;
+  viewMode?: 'all' | 'free_only' | 'premium_only';
+  setViewMode?: (v: 'all' | 'free_only' | 'premium_only') => void;
   searchQuery: string;
   setSearchQuery: (q: string) => void;
   freeCount: number;
   premiumCount: number;
 }
 
-const SUBJECT_OPTIONS: ('All' | Subject)[] = [
-  'All',
-  'Economics',
-  'Maths',
-  'Physics',
-  'Chemistry',
-  'Biology',
-  'Commerce',
-  'Science',
-  'Social Science',
-  'Tamil',
-  'English'
+const COMMON_SUBJECTS: { name: Subject; color: string }[] = [
+  { name: 'Economics', color: 'bg-emerald-100 text-emerald-900 border-emerald-300' },
+  { name: 'Maths', color: 'bg-blue-100 text-blue-900 border-blue-300' },
+  { name: 'Physics', color: 'bg-violet-100 text-violet-900 border-violet-300' },
+  { name: 'Chemistry', color: 'bg-pink-100 text-pink-900 border-pink-300' },
+  { name: 'Biology', color: 'bg-teal-100 text-teal-900 border-teal-300' },
+  { name: 'Science', color: 'bg-cyan-100 text-cyan-900 border-cyan-300' },
+  { name: 'Social Science', color: 'bg-orange-100 text-orange-900 border-orange-300' },
+  { name: 'Tamil', color: 'bg-amber-100 text-amber-900 border-amber-300' },
 ];
 
 export const FilterBar: React.FC<FilterBarProps> = ({
@@ -38,122 +35,105 @@ export const FilterBar: React.FC<FilterBarProps> = ({
   setSelectedSubject,
   selectedExam = 'All',
   setSelectedExam,
-  viewMode,
-  setViewMode,
   searchQuery,
   setSearchQuery,
-  freeCount,
-  premiumCount
 }) => {
+  const isFiltered = selectedClass !== 'All' || selectedSubject !== 'All' || selectedExam !== 'All' || searchQuery.trim() !== '';
+
+  const handleReset = () => {
+    setSelectedClass('All');
+    setSelectedSubject('All');
+    if (setSelectedExam) setSelectedExam('All');
+    setSearchQuery('');
+  };
+
   return (
-    <div className="bg-white p-3 sm:p-3.5 rounded-2xl border-2 border-amber-300 shadow-xs space-y-2.5 text-[#1F2937]">
-      {/* Top Row: Quick View Toggle & Search */}
-      <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2">
-        {/* Toggle: All / Free PDFs / Centum Packs */}
-        <div className="flex items-center bg-amber-50 p-0.5 rounded-xl border border-amber-200">
-          <button
-            onClick={() => setViewMode('all')}
-            className={`flex-1 sm:flex-initial px-3 py-1.5 rounded-lg text-xs font-black transition-all ${
-              viewMode === 'all'
-                ? 'bg-[#FFBB00] text-black shadow-xs'
-                : 'text-gray-600 hover:text-black font-bold'
-            }`}
-          >
-            All ({freeCount + premiumCount})
-          </button>
+    <div className="bg-white rounded-2xl border-2 border-amber-300 p-2.5 sm:p-3 shadow-xs space-y-2">
+      {/* 1-Tap Subject Chips Row */}
+      <div className="flex items-center gap-1.5 overflow-x-auto pb-1 scrollbar-none text-xs">
+        <button
+          onClick={() => setSelectedSubject('All')}
+          className={`px-2.5 py-1 rounded-lg font-black shrink-0 transition-all border ${
+            selectedSubject === 'All'
+              ? 'bg-slate-900 text-white border-slate-900 shadow-xs'
+              : 'bg-slate-100 text-slate-700 hover:bg-slate-200 border-slate-200'
+          }`}
+        >
+          All Subjects
+        </button>
 
-          <button
-            onClick={() => setViewMode('free_only')}
-            className={`flex-1 sm:flex-initial px-3 py-1.5 rounded-lg text-xs font-black transition-all ${
-              viewMode === 'free_only'
-                ? 'bg-[#0F9D58] text-white shadow-xs'
-                : 'text-gray-600 hover:text-black font-bold'
-            }`}
-          >
-            Free PDFs ({freeCount})
-          </button>
-
-          <button
-            onClick={() => setViewMode('premium_only')}
-            className={`flex-1 sm:flex-initial px-3 py-1.5 rounded-lg text-xs font-black transition-all ${
-              viewMode === 'premium_only'
-                ? 'bg-[#FF4D00] text-white shadow-xs'
-                : 'text-gray-600 hover:text-black font-bold'
-            }`}
-          >
-            Centum Packs ({premiumCount})
-          </button>
-        </div>
-
-        {/* Search Bar (Compact) */}
-        <div className="relative flex-1 sm:max-w-xs">
-          <input
-            type="text"
-            placeholder="Search e.g. Economics, Maths..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full pl-8 pr-3 py-1.5 rounded-xl bg-slate-50 border border-slate-200 text-xs font-bold text-slate-800 focus:outline-none focus:border-amber-400"
-          />
-          <Search className="w-3.5 h-3.5 text-gray-400 absolute left-2.5 top-2.5 pointer-events-none" />
-        </div>
+        {COMMON_SUBJECTS.map((sub) => {
+          const isSelected = selectedSubject === sub.name;
+          return (
+            <button
+              key={sub.name}
+              onClick={() => setSelectedSubject(isSelected ? 'All' : sub.name)}
+              className={`px-2.5 py-1 rounded-lg font-black shrink-0 transition-all border ${
+                isSelected
+                  ? 'bg-[#FF4D00] text-white border-[#FF4D00] shadow-xs scale-105'
+                  : `${sub.color} hover:opacity-90`
+              }`}
+            >
+              {sub.name}
+            </button>
+          );
+        })}
       </div>
 
-      {/* Second Row: Class & Exam & Subject Pills (Horizontal Scrollable) */}
-      <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 pt-1 border-t border-slate-100">
-        {/* Class Pills */}
-        <div className="flex items-center gap-1 shrink-0 overflow-x-auto pb-1 sm:pb-0">
-          <span className="text-[10px] font-black uppercase text-gray-400 mr-0.5">Class:</span>
-          {(['All', '12th', '11th', '10th'] as const).map((cls) => (
-            <button
-              key={cls}
-              onClick={() => setSelectedClass(cls)}
-              className={`px-2.5 py-1 rounded-lg text-xs font-black transition-all whitespace-nowrap ${
-                selectedClass === cls
-                  ? 'bg-slate-900 text-white shadow-xs'
-                  : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
-              }`}
-            >
-              {cls}
-            </button>
-          ))}
+      {/* Dropdown Filters & Search in 1 Compact Row */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 pt-0.5">
+        {/* Class Dropdown */}
+        <div>
+          <select
+            value={selectedClass}
+            onChange={(e) => setSelectedClass(e.target.value as 'All' | ClassLevel)}
+            className="w-full bg-amber-50/80 border border-amber-300 rounded-xl px-2.5 py-1.5 text-xs font-black text-slate-800 focus:outline-none focus:ring-2 focus:ring-[#FF4D00] cursor-pointer"
+          >
+            <option value="All">All Classes</option>
+            <option value="12th">12th Standard</option>
+            <option value="11th">11th Standard</option>
+            <option value="10th">10th Standard</option>
+            <option value="9th">9th Standard</option>
+          </select>
         </div>
 
-        {/* Exam Type Pills */}
-        {setSelectedExam && (
-          <div className="flex items-center gap-1 shrink-0 overflow-x-auto pb-1 sm:pb-0 border-l sm:border-l sm:pl-2 border-slate-200">
-            <span className="text-[10px] font-black uppercase text-gray-400 mr-0.5">Exam:</span>
-            {(['All', 'Quarterly', 'Half-Yearly', 'Public Board'] as const).map((exam) => (
-              <button
-                key={exam}
-                onClick={() => setSelectedExam(exam as any)}
-                className={`px-2.5 py-1 rounded-lg text-xs font-black transition-all whitespace-nowrap ${
-                  selectedExam === exam
-                    ? 'bg-amber-500 text-slate-950 shadow-xs'
-                    : 'bg-amber-50 text-amber-900 hover:bg-amber-100'
-                }`}
-              >
-                {exam}
-              </button>
-            ))}
-          </div>
-        )}
+        {/* Exam Dropdown */}
+        <div>
+          <select
+            value={selectedExam}
+            onChange={(e) => setSelectedExam && setSelectedExam(e.target.value as 'All' | ExamType)}
+            className="w-full bg-amber-50/80 border border-amber-300 rounded-xl px-2.5 py-1.5 text-xs font-black text-slate-800 focus:outline-none focus:ring-2 focus:ring-[#FF4D00] cursor-pointer"
+          >
+            <option value="All">All Exams</option>
+            <option value="Quarterly">Quarterly Special</option>
+            <option value="Half-Yearly">Half-Yearly</option>
+            <option value="Public Board">Public Board Exam</option>
+          </select>
+        </div>
 
-        {/* Subject Pills (Scrollable) */}
-        <div className="flex items-center gap-1 overflow-x-auto pb-1 sm:pb-0 border-l sm:border-l sm:pl-2 border-slate-200 no-scrollbar">
-          <span className="text-[10px] font-black uppercase text-gray-400 mr-0.5">Subject:</span>
-          {SUBJECT_OPTIONS.map((sub) => (
+        {/* Search Input */}
+        <div className="relative col-span-2 sm:col-span-2 flex items-center gap-1.5">
+          <div className="relative flex-1">
+            <Search className="w-3.5 h-3.5 absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
+            <input
+              type="text"
+              placeholder="Search chapters (e.g. Economics, Matrices)..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-full bg-slate-50 border border-slate-200 rounded-xl pl-8 pr-3 py-1.5 text-xs font-bold text-slate-800 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#FF4D00] focus:bg-white transition-all"
+            />
+          </div>
+
+          {isFiltered && (
             <button
-              key={sub}
-              onClick={() => setSelectedSubject(sub)}
-              className={`px-2 py-0.5 rounded-lg text-[11px] font-bold transition-all whitespace-nowrap ${
-                selectedSubject === sub
-                  ? 'bg-[#FF4D00] text-white shadow-xs font-black'
-                  : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
-              }`}
+              onClick={handleReset}
+              className="flex items-center gap-1 text-[11px] font-black text-gray-600 hover:text-black bg-gray-100 hover:bg-gray-200 px-2 py-1.5 rounded-xl transition-colors shrink-0"
+              title="Reset filter"
             >
-              {sub}
+              <RotateCcw className="w-3 h-3" />
+              <span>Reset</span>
             </button>
-          ))}
+          )}
         </div>
       </div>
     </div>

@@ -5,9 +5,10 @@ import { Language, TutorConfig } from '../types';
 interface FooterProps {
   config: TutorConfig;
   lang: Language;
+  onOpenTutorAdmin?: () => void;
 }
 
-export const Footer: React.FC<FooterProps> = ({ config, lang }) => {
+export const Footer: React.FC<FooterProps> = ({ config, lang, onOpenTutorAdmin }) => {
 
   return (
     <footer className="border-t-4 border-[#FFBB00] bg-white text-[#1F2937] text-xs py-10 px-4 sm:px-6">
@@ -95,10 +96,19 @@ export const Footer: React.FC<FooterProps> = ({ config, lang }) => {
         <div>
           © 1999 – 2026 {config.centreName}, Madurai. All rights reserved.
         </div>
-        <div className="flex items-center gap-1">
-          <span>Crafted for Madurai Students with</span>
-          <Heart className="w-3.5 h-3.5 text-[#FF4D00] fill-[#FF4D00]" />
-          <span>• 100% Free Architecture</span>
+        <div className="flex items-center gap-3">
+          <div className="flex items-center gap-1">
+            <span>Crafted for Madurai Students with</span>
+            <Heart className="w-3.5 h-3.5 text-[#FF4D00] fill-[#FF4D00]" />
+          </div>
+          {onOpenTutorAdmin && (
+            <button
+              onClick={onOpenTutorAdmin}
+              className="text-gray-400 hover:text-slate-800 underline text-[11px]"
+            >
+              Tutor Login
+            </button>
+          )}
         </div>
       </div>
     </footer>

@@ -1,8 +1,8 @@
 export type Language = 'tanglish' | 'tamil';
 
-export type AppPage = 'study' | 'pricing' | 'calculator' | 'trust';
+export type AppPage = 'study' | 'pricing' | 'calculator' | 'tools' | 'trust' | 'tutor';
 
-export type ClassLevel = '10th' | '11th' | '12th';
+export type ClassLevel = '9th' | '10th' | '11th' | '12th';
 
 export type Subject = 
   | 'Maths' 
@@ -21,6 +21,11 @@ export type Subject =
 export type ExamType = 'Quarterly' | 'Half-Yearly' | 'Public Board' | 'Revision';
 
 export type ResourceCategory = 'formula' | 'two_mark' | 'three_mark' | 'five_mark' | 'mindmap' | 'timetable';
+
+export interface CartItem {
+  bundle: PremiumBundle;
+  addedAt: number;
+}
 
 export interface FreeResource {
   id: string;
